@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テトリスゲーム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>🎮 テトリス</h1>
+            <div class="score-board">
+                <div class="score-item">
+                    <span class="label">スコア</span>
+                    <span class="value" id="score">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="label">レベル</span>
+                    <span class="value" id="level">1</span>
+                </div>
+                <div class="score-item">
+                    <span class="label">消去行</span>
+                    <span class="value" id="lines">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-area">
+            <div class="next-piece-container">
+                <h3>次のピース</h3>
+                <canvas id="nextCanvas" width="120" height="120"></canvas>
+            </div>
+            
+            <div class="main-game">
+                <canvas id="gameCanvas" width="300" height="600"></canvas>
+                <div class="game-overlay" id="gameOverlay">
+                    <div class="overlay-content">
+                        <h2 id="overlayTitle">ゲーム開始</h2>
+                        <p id="overlayMessage">スペースキーで開始</p>
+                        <button id="startButton" class="btn">開始</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <h3>操作方法</h3>
+                <div class="control-item">
+                    <span class="key">← →</span>
+                    <span class="desc">左右移動</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">↓</span>
+                    <span class="desc">高速落下</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">↑ / Z</span>
+                    <span class="desc">回転</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">スペース</span>
+                    <span class="desc">一時停止/再開</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- BGM用のオーディオ要素（フリー素材の音声ファイルを追加可能） -->
+    <audio id="bgmAudio" loop>
+        <!-- フリー素材のBGMファイルを追加する場合は、以下のコメントを外してファイル名を指定 -->
+        <!-- <source src="bgm.mp3" type="audio/mpeg"> -->
+        <!-- <source src="bgm.ogg" type="audio/ogg"> -->
+    </audio>
+    
+    <script src="game.js"></script>
+</body>
+</html>
