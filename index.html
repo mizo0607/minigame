@@ -34,11 +34,15 @@
             
             <div class="main-game">
                 <canvas id="gameCanvas" width="300" height="600"></canvas>
+                <canvas id="backgroundCanvas" width="300" height="600"></canvas>
+                <!-- メイン画像を設定する場合は、src属性に画像ファイルのパスを指定してください -->
+                <!-- 例: <img id="mainImage" src="images/tetris-main.jpg" alt="テトリスゲーム" class="main-image"> -->
+                <img id="mainImage" src="" alt="テトリスゲーム" class="main-image">
                 <div class="game-overlay" id="gameOverlay">
                     <div class="overlay-content">
-                        <h2 id="overlayTitle">ゲーム開始</h2>
+                        <h2 id="overlayTitle">TETRIS</h2>
                         <p id="overlayMessage">スペースキーで開始</p>
-                        <button id="startButton" class="btn">開始</button>
+                        <button id="startButton" class="btn pulse-animation">開始</button>
                     </div>
                 </div>
             </div>

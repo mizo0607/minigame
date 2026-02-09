@@ -33,7 +33,7 @@ let score = 0;
 let level = 1;
 let lines = 0;
 let dropCounter = 0;
-let dropInterval = 1000;
+let dropInterval = 500; // 初期速度を500msに設定（より速く）
 let lastTime = 0;
 let gameRunning = false;
 let gamePaused = false;
@@ -53,6 +53,12 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('nextCanvas');
 const nextCtx = nextCanvas.getContext('2d');
+const backgroundCanvas = document.getElementById('backgroundCanvas');
+const bgCtx = backgroundCanvas ? backgroundCanvas.getContext('2d') : null;
+
+// 背景アニメーション用のテトリミノ
+let backgroundPieces = [];
+let sampleBoard = null;
 
 // オーディオコンテキストを初期化
 function initAudio() {
@@ -299,6 +305,123 @@ function playSound(type) {
     }
 }
 
+// 背景用のサンプルボードを作成（プレイ中の様子）
+function createSampleBoard() {
+    // サンプルボードを生成（テトリミノが積み上がった状態）
+    const sampleBoard = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+    
+    // 下部にブロックを配置（プレイ中の様子を再現）
+    for (let y = ROWS - 1; y >= ROWS - 15; y--) {
+        for (let x = 0; x < COLS; x++) {
+            // ランダムにブロックを配置（ただし、完全に埋めない）
+            if (Math.random() > 0.3) {
+                const type = Math.floor(Math.random() * 7) + 1;
+                sampleBoard[y][x] = type;
+            }
+        }
+    }
+    
+    // いくつかの行を完全に埋めて、プレイ中の様子を演出
+    for (let y = ROWS - 5; y < ROWS - 2; y++) {
+        for (let x = 0; x < COLS; x++) {
+            if (Math.random() > 0.1) {
+                const type = Math.floor(Math.random() * 7) + 1;
+                sampleBoard[y][x] = type;
+            }
+        }
+    }
+    
+    return sampleBoard;
+}
+
+// 背景アニメーションを描画（プレイ中の様子）
+function drawBackgroundAnimation() {
+    if (!bgCtx || !sampleBoard) return;
+    
+    // ゲームボードの背景
+    bgCtx.fillStyle = '#1a1a2e';
+    bgCtx.fillRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+    
+    // グリッド線
+    bgCtx.strokeStyle = '#2a2a3e';
+    bgCtx.lineWidth = 1;
+    for (let i = 0; i <= COLS; i++) {
+        bgCtx.beginPath();
+        bgCtx.moveTo(i * BLOCK_SIZE, 0);
+        bgCtx.lineTo(i * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+        bgCtx.stroke();
+    }
+    for (let i = 0; i <= ROWS; i++) {
+        bgCtx.beginPath();
+        bgCtx.moveTo(0, i * BLOCK_SIZE);
+        bgCtx.lineTo(COLS * BLOCK_SIZE, i * BLOCK_SIZE);
+        bgCtx.stroke();
+    }
+    
+    // サンプルボードのブロックを描画
+    for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+            if (sampleBoard[y][x]) {
+                const color = COLORS[sampleBoard[y][x]];
+                const px = x * BLOCK_SIZE;
+                const py = y * BLOCK_SIZE;
+                
+                // ブロック本体
+                bgCtx.fillStyle = color;
+                bgCtx.fillRect(px + 1, py + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+                
+                // ハイライト
+                bgCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                bgCtx.fillRect(px + 1, py + 1, BLOCK_SIZE - 2, (BLOCK_SIZE - 2) / 3);
+                
+                // シャドウ
+                bgCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                bgCtx.fillRect(px + 1, py + (BLOCK_SIZE - 2) * 2 / 3, BLOCK_SIZE - 2, (BLOCK_SIZE - 2) / 3);
+            }
+        }
+    }
+    
+    // 現在落下中のテトリミノも描画（オプション）
+    if (backgroundPieces.length > 0) {
+        const piece = backgroundPieces[0];
+        piece.y += piece.speed;
+        
+        if (piece.y > ROWS * BLOCK_SIZE) {
+            piece.y = -piece.shape.length * BLOCK_SIZE;
+            piece.x = Math.random() * (COLS - piece.shape[0].length);
+        }
+        
+        for (let y = 0; y < piece.shape.length; y++) {
+            for (let x = 0; x < piece.shape[y].length; x++) {
+                if (piece.shape[y][x]) {
+                    const px = (piece.x + x) * BLOCK_SIZE;
+                    const py = piece.y + y * BLOCK_SIZE;
+                    
+                    if (py >= 0 && py < ROWS * BLOCK_SIZE) {
+                        bgCtx.fillStyle = piece.color;
+                        bgCtx.fillRect(px + 1, py + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+                        
+                        bgCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                        bgCtx.fillRect(px + 1, py + 1, BLOCK_SIZE - 2, (BLOCK_SIZE - 2) / 3);
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 背景アニメーションループ
+function backgroundAnimationLoop() {
+    if (!gameRunning && bgCtx) {
+        const mainImage = document.getElementById('mainImage');
+        // メイン画像が設定されていない場合のみ背景アニメーションを表示
+        if (!mainImage || !mainImage.src || mainImage.src === window.location.href) {
+            drawBackgroundAnimation();
+        }
+        requestAnimationFrame(backgroundAnimationLoop);
+    }
+}
+
 // 初期化
 function init() {
     // ボードを初期化
@@ -311,8 +434,32 @@ function init() {
     document.addEventListener('keydown', handleKeyPress);
     document.getElementById('startButton').addEventListener('click', startGame);
     
+    // サンプルボードを作成（プレイ中の様子）
+    sampleBoard = createSampleBoard();
+    
+    // 背景アニメーション用のテトリミノを作成（落下中のピース）
+    backgroundPieces = [{
+        x: Math.floor(COLS / 2) - 1,
+        y: -3,
+        shape: SHAPES[Math.floor(Math.random() * 7) + 1],
+        type: Math.floor(Math.random() * 7) + 1,
+        color: COLORS[Math.floor(Math.random() * 7) + 1],
+        speed: 0.5
+    }];
+    
+    // 背景アニメーションを開始
+    if (bgCtx) {
+        backgroundAnimationLoop();
+    }
+    
+    // メイン画像を表示（画像が設定されている場合）
+    const mainImage = document.getElementById('mainImage');
+    if (mainImage && mainImage.src && mainImage.src !== window.location.href && mainImage.src !== '') {
+        mainImage.classList.add('show');
+    }
+    
     // ゲームオーバーレイを表示
-    showOverlay('ゲーム開始', 'スペースキーまたはボタンで開始');
+    showOverlay('TETRIS', 'スペースキーまたはボタンで開始');
     
     // 次のピースを生成
     nextPiece = createPiece();
@@ -639,9 +786,12 @@ function finishLineClear(linesToClear) {
     const points = [0, 100, 300, 500, 800];
     score += points[linesToClear.length] * level;
     
-    // レベルアップ（10行ごと）
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+        // レベルアップ（10行ごと）
+        level = Math.floor(lines / 10) + 1;
+        // レベルに応じて速度を上げる（段階的に加速）
+        // レベル1: 500ms, レベル2: 400ms, レベル3: 320ms, レベル4: 250ms, レベル5: 190ms, ...
+        // 指数関数的に速度が上がるように調整
+        dropInterval = Math.max(50, Math.floor(500 / Math.pow(1.25, level - 1)));
     
     updateScore();
     
@@ -781,7 +931,7 @@ function startGame() {
         level = 1;
         lines = 0;
         dropCounter = 0;
-        dropInterval = 1000;
+        dropInterval = 500; // 初期速度を500msに設定
         currentPiece = null;
         nextPiece = createPiece();
         lineClearEffect = null;
@@ -806,6 +956,13 @@ function startGame() {
     
     gameRunning = true;
     gamePaused = false;
+    
+    // メイン画像を非表示
+    const mainImage = document.getElementById('mainImage');
+    if (mainImage) {
+        mainImage.classList.remove('show');
+    }
+    
     hideOverlay();
     lastTime = performance.now();
     gameLoop();
@@ -857,7 +1014,7 @@ function showOverlay(title, message, showButton = false) {
         button.textContent = 'もう一度遊ぶ';
         button.style.display = 'block';
     } else {
-        button.style.display = title === 'ゲーム開始' ? 'block' : 'none';
+        button.style.display = title === 'TETRIS' ? 'block' : 'none';
     }
     
     overlay.classList.remove('hidden');
